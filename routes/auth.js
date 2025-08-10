@@ -1,8 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const svgCaptcha = require("svg-captcha");
+const speakeasy = require("speakeasy");
+const qrcode = require("qrcode");
 
-// Mostrar el formulario de login
+// Mostrar formulario de login
 router.get("/", (req, res) => {
   res.render("login", {
     error: null,
@@ -24,24 +26,21 @@ router.get("/captcha", (req, res) => {
   res.status(200).send(captcha.data);
 });
 
-// Procesar el login
-router.post("/login", (req, res) => {
+// Procesar login (paso 1: captcha + credenciales)
+router.post("/login", async (req, res) => {
   const { username, password, captcha } = req.body;
+
+  // Validar captcha
   const captchaOk =
     captcha &&
     req.session.captcha &&
     captcha.toLowerCase() === req.session.captcha.toLowerCase();
-  // Limpia el captcha para que no pueda reutilizarse
+
   req.session.captcha = null;
   req.session.captchaSvg = null;
+
   if (!captchaOk) {
-    // Genera un nuevo captcha para mostrar en el formulario
-    const newCaptcha = svgCaptcha.create({
-      size: 5,
-      noise: 2,
-      color: true,
-      background: "#ccf2ff",
-    });
+    const newCaptcha = svgCaptcha.create({ size: 5, noise: 2, color: true, background: "#ccf2ff" });
     req.session.captcha = newCaptcha.text;
     req.session.captchaSvg = newCaptcha.data;
     return res.render("login", {
@@ -49,18 +48,24 @@ router.post("/login", (req, res) => {
       captchaSvg: newCaptcha.data,
     });
   }
-  // Lógica de autenticación real (aquí ejemplo fijo)
+
+  // Validar credenciales (ejemplo fijo)
   if (username === "admin" && password === "123456") {
-    req.session.authenticated = true;
-    return res.render("confirmacion");
-  } else {
-    // Genera un nuevo captcha para mostrar en el formulario
-    const newCaptcha = svgCaptcha.create({
-      size: 5,
-      noise: 2,
-      color: true,
-      background: "#ccf2ff",
+    // Generar secreto 2FA temporal
+    const secret = speakeasy.generateSecret({
+      name: "MiAppSegura",
     });
+    req.session.tempSecret = secret.base32;
+
+    // Generar QR
+    const qrDataUrl = await qrcode.toDataURL(secret.otpauth_url);
+
+    return res.render("2fa", {
+      qrCode: qrDataUrl,
+      error: null,
+    });
+  } else {
+    const newCaptcha = svgCaptcha.create({ size: 5, noise: 2, color: true, background: "#ccf2ff" });
     req.session.captcha = newCaptcha.text;
     req.session.captchaSvg = newCaptcha.data;
     return res.render("login", {
@@ -69,4 +74,26 @@ router.post("/login", (req, res) => {
     });
   }
 });
+
+// Verificar código 2FA (paso 2)
+router.post("/verify-2fa", (req, res) => {
+  const { token } = req.body;
+  const verified = speakeasy.totp.verify({
+    secret: req.session.tempSecret,
+    encoding: "base32",
+    token,
+  });
+
+  if (verified) {
+    req.session.authenticated = true;
+    delete req.session.tempSecret;
+    return res.render("confirmacion");
+  } else {
+    return res.render("2fa", {
+      qrCode: null,
+      error: "Código inválido, inténtalo de nuevo.",
+    });
+  }
+});
+
 module.exports = router;

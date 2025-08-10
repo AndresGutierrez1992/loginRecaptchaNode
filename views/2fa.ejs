@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>🌿🐾 Verificación en Dos Pasos 🐾🌿</title>
+  <style>
+    body {
+      font-family: 'Comic Sans MS', cursive, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(to bottom, #d0f4de, #a9def9, #e4c1f9);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    header {
+      background-color: rgba(255,255,255,0.7);
+      padding: 15px;
+      width: 100%;
+      box-shadow: 0px 2px 8px rgba(0,0,0,0.2);
+    }
+    h2 {
+      color: #35524a;
+      font-size: 2em;
+    }
+    .error {
+      color: red;
+      font-weight: bold;
+      background: rgba(255, 0, 0, 0.1);
+      padding: 10px;
+      border-radius: 8px;
+      margin: 10px 0;
+    }
+    .qr-section {
+      background: rgba(255,255,255,0.85);
+      border-radius: 15px;
+      padding: 20px;
+      margin-top: 20px;
+      box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
+    }
+    img {
+      margin: 20px auto;
+      display: block;
+      border: 4px solid #a7c957;
+      border-radius: 15px;
+      background: white;
+      padding: 10px;
+    }
+    form {
+      margin-top: 20px;
+    }
+    input {
+      padding: 10px;
+      border: 2px solid #a7c957;
+      border-radius: 8px;
+      font-size: 1.1em;
+      width: 200px;
+      text-align: center;
+    }
+    button {
+      background-color: #6a994e;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin-left: 10px;
+      border-radius: 8px;
+      font-size: 1em;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover {
+      background-color: #386641;
+    }
+    footer {
+      margin-top: auto;
+      padding: 10px;
+      font-size: 0.9em;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h2>🌼🐰 Verificación en Dos Pasos 🦊🌳</h2>
+    <p>Protegiendo tu cuenta con amor por la naturaleza 💚</p>
+  </header>
+
+  <% if (error) { %>
+    <div class="error"><%= error %></div>
+  <% } %>
+
+  <div class="qr-section">
+    <% if (qrCode) { %>
+      <p>Escanea este código QR con <strong>Google Authenticator</strong> 📱:</p>
+      <img src="<%= qrCode %>" alt="QR Code">
+    <% } else { %>
+      <p>Generando tu código seguro... 🐦</p>
+    <% } %>
+
+    <form action="/verify-2fa" method="POST">
+      <input type="text" name="token" placeholder="Código de 6 dígitos" required>
+      <button type="submit">Verificar ✅</button>
+    </form>
+  </div>
+
+  <footer>
+    🌿 Hecho con amor, seguridad y naturaleza 🐢🌸
+  </footer>
+</body>
+</html>
