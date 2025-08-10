@@ -40,7 +40,12 @@ router.post("/login", async (req, res) => {
   req.session.captchaSvg = null;
 
   if (!captchaOk) {
-    const newCaptcha = svgCaptcha.create({ size: 5, noise: 2, color: true, background: "#ccf2ff" });
+    const newCaptcha = svgCaptcha.create({
+      size: 5,
+      noise: 2,
+      color: true,
+      background: "#ccf2ff"
+    });
     req.session.captcha = newCaptcha.text;
     req.session.captchaSvg = newCaptcha.data;
     return res.render("login", {
@@ -51,21 +56,32 @@ router.post("/login", async (req, res) => {
 
   // Validar credenciales (ejemplo fijo)
   if (username === "admin" && password === "123456") {
-    // Generar secreto 2FA temporal
-    const secret = speakeasy.generateSecret({
-      name: "MiAppSegura",
-    });
-    req.session.tempSecret = secret.base32;
+    // Si ya tiene secret guardado en sesión, no volver a generar QR
+    if (!req.session.twoFactorSecret) {
+      const secret = speakeasy.generateSecret({ name: "MiAppSegura" });
+      req.session.twoFactorSecret = secret.base32;
 
-    // Generar QR
-    const qrDataUrl = await qrcode.toDataURL(secret.otpauth_url);
+      // Generar QR solo la primera vez
+      const qrDataUrl = await qrcode.toDataURL(secret.otpauth_url);
+      return res.render("2fa", {
+        qrCode: qrDataUrl,
+        error: null,
+      });
+    }
 
+    // Si ya tiene secret, solo pedir el código
     return res.render("2fa", {
-      qrCode: qrDataUrl,
+      qrCode: null,
       error: null,
     });
+
   } else {
-    const newCaptcha = svgCaptcha.create({ size: 5, noise: 2, color: true, background: "#ccf2ff" });
+    const newCaptcha = svgCaptcha.create({
+      size: 5,
+      noise: 2,
+      color: true,
+      background: "#ccf2ff"
+    });
     req.session.captcha = newCaptcha.text;
     req.session.captchaSvg = newCaptcha.data;
     return res.render("login", {
@@ -79,14 +95,13 @@ router.post("/login", async (req, res) => {
 router.post("/verify-2fa", (req, res) => {
   const { token } = req.body;
   const verified = speakeasy.totp.verify({
-    secret: req.session.tempSecret,
+    secret: req.session.twoFactorSecret,
     encoding: "base32",
     token,
   });
 
   if (verified) {
     req.session.authenticated = true;
-    delete req.session.tempSecret;
     return res.render("confirmacion");
   } else {
     return res.render("2fa", {
